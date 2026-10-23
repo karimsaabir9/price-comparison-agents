@@ -94,14 +94,15 @@ output existing in state:
      outlier suggesting a wrong product match)?
    - Output: `state.data.finalAnswer` — `{ siteName, price, currency, url,
      summary }` plus `state.data.approved` (boolean).
-   - The retry-with-next-cheapest logic happens **inside the
-     `approve_result` tool handler itself**, not via the router (the
-     router only re-invokes Moderator while `approved === undefined`, and
-     `approved` is set on the first invocation). The handler checks
-     `ranked[0]`; if implausible, it checks `ranked[1]`; after 2 checks it
-     approves the best candidate seen so far and notes the caveat in
-     `summary` — same bounded-attempts discipline as the poster
-     generator's `posterAttempts` cap in `multi-agent-system`.
+   - Retry-with-next-cheapest uses the **same router re-entry pattern** as
+     `posterGeneratorAgent` in `multi-agent-system`: the tool tracks
+     `state.data.moderatorAttempts` (incremented each call). While a
+     candidate is judged implausible and attempts < 2, the tool leaves
+     `approved` as `undefined`, so the router (`approved === undefined`)
+     sends the network back to Moderator; its system prompt reads
+     `moderatorAttempts` to know which `ranked[]` index to evaluate next.
+     Once a candidate is judged plausible, or attempts reach 2, the tool
+     sets `approved = true` and writes `finalAnswer`, ending the loop.
 
 ## Data flow
 
