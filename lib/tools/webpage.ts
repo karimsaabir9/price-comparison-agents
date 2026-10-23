@@ -8,6 +8,32 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Video/social platforms are never a place to buy anything — a price
+// mentioned in a video title or caption ("totally worth $69") is not a
+// real, current, buyable price. Block these before spending a scrape or a
+// model call on them, rather than relying solely on the model's judgment.
+const NON_RETAIL_HOSTS = [
+  "youtube.com",
+  "youtu.be",
+  "tiktok.com",
+  "facebook.com",
+  "instagram.com",
+  "twitter.com",
+  "x.com",
+  "reddit.com",
+  "vimeo.com",
+  "pinterest.com",
+];
+
+const isNonRetailHost = (url: string): boolean => {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "");
+    return NON_RETAIL_HOSTS.some((h) => hostname === h || hostname.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+};
+
 export const readWebpageTool = createTool({
   name: "read_webpage",
   description:
@@ -23,6 +49,15 @@ export const readWebpageTool = createTool({
       network.state.data.listings = network.state.data.listings || [];
       network.state.data.pageReaderAttempted = network.state.data.pageReaderAttempted || [];
       return { success: true, found: false };
+    }
+
+    if (isNonRetailHost(input.url)) {
+      network.state.data.listings = network.state.data.listings || [];
+      const attemptedNonRetail = network?.state.data.pageReaderAttempted || [];
+      if (!attemptedNonRetail.includes(input.url)) {
+        network.state.data.pageReaderAttempted = [...attemptedNonRetail, input.url];
+      }
+      return { success: true, found: false, skipped: true };
     }
 
     // Inngest requires step IDs to be unique within a single function run —
@@ -110,14 +145,15 @@ export const readWebpageTool = createTool({
               role: "system",
               content:
                 'You extract a product price from scraped webpage text. Respond with ONLY a JSON object: {"matches": boolean, "price": number|null, "currency": "USD"|"EUR"|"GBP"|null}. ' +
-                '"matches" is true if the page text clearly refers to the exact product being searched for (not a different model/configuration, not a generic catalog or shop-all page for unrelated products, not an accessory or unrelated item). ' +
+                '"matches" is true if the page is somewhere a shopper could actually buy or price-compare the exact product being searched for (not a different model/configuration, not a generic catalog or shop-all page for unrelated products, not an accessory or unrelated item). ' +
                 "This includes price-comparison or aggregator pages (e.g. a page listing this exact product's price across several stores or regions) — in that case set matches true and pick the single LOWEST real consumer retail price shown for this exact product. " +
+                "ALWAYS set matches to false for video platforms (YouTube, TikTok, Vimeo), social media (Facebook, Instagram, X/Twitter, Reddit), forums, or blog/review/news articles — even if a price is mentioned in their text or title, a number quoted in a video description or post is not a real, current, buyable price, no matter how specific it looks. Only match actual store/retailer pages or genuine price-comparison/aggregator sites. " +
                 "Do NOT match wholesale/bulk-order price ranges (e.g. per-unit prices that depend on minimum order quantity) — those are not real consumer prices. " +
                 "If matches is false, or no clear single retail price for that specific product is present, set price and currency to null.",
             },
             {
               role: "user",
-              content: `Product being searched for: "${productQuery}"\nPage title: "${input.title}"\nPage text:\n${scrapedText.slice(0, 6000)}`,
+              content: `Product being searched for: "${productQuery}"\nSite: "${input.site}"\nPage title: "${input.title}"\nPage text:\n${scrapedText.slice(0, 6000)}`,
             },
           ],
         });
