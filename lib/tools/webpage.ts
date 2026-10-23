@@ -21,6 +21,7 @@ export const readWebpageTool = createTool({
   handler: async (input, { network, step }) => {
     if (input.url === "none") {
       network.state.data.listings = network.state.data.listings || [];
+      network.state.data.pageReaderAttempted = network.state.data.pageReaderAttempted || [];
       return { success: true, found: false };
     }
 
@@ -53,6 +54,10 @@ export const readWebpageTool = createTool({
     });
 
     if (runId && pageReaderCalls && pageReaderCalls > 8) {
+      const attemptedOnCap = network?.state.data.pageReaderAttempted || [];
+      if (!attemptedOnCap.includes(input.url)) {
+        network.state.data.pageReaderAttempted = [...attemptedOnCap, input.url];
+      }
       return { success: true, found: false, skipped: true };
     }
 
@@ -141,6 +146,10 @@ export const readWebpageTool = createTool({
           ? extractPriceFromText(scrapedText)
           : null;
 
+    console.log(
+      `🔎 [PageReader] ${input.site} | scraped: ${scrapedText ? scrapedText.length + " chars" : "FAILED"} | matches: ${extraction?.matches} | price: ${extraction?.price} ${extraction?.currency ?? ""} | extractionFailed: ${extraction?.extractionFailed} | final: ${extracted ? `${extracted.price} ${extracted.currency}` : "none"}`,
+    );
+
     const existing = network?.state.data.listings || [];
 
     if (extracted) {
@@ -156,6 +165,15 @@ export const readWebpageTool = createTool({
       network.state.data.listings = existing;
     }
 
+    // Track every attempted URL (win or lose) so the router knows whether
+    // every candidate has actually been read — a single agent turn only
+    // reliably triggers one read_webpage call, so `listings` alone can't
+    // signal completion (see lib/network.ts).
+    const attempted = network?.state.data.pageReaderAttempted || [];
+    if (!attempted.includes(input.url)) {
+      network.state.data.pageReaderAttempted = [...attempted, input.url];
+    }
+
     await step?.run(`save_to_db-${stepId}`, async () => {
       const { getDB } = await import("../db");
       const db = await getDB();
@@ -166,6 +184,7 @@ export const readWebpageTool = createTool({
           {
             $set: {
               "state.listings": network.state.data.listings,
+              "state.pageReaderAttempted": network.state.data.pageReaderAttempted,
               "progress.pageReader": "in_progress",
               updatedAt: new Date(),
             },

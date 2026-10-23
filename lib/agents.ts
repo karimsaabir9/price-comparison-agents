@@ -47,6 +47,8 @@ export const pageReaderAgent = createAgent({
   description: "Opens each candidate shopping page and extracts its price",
   system: ({ network }) => {
     const candidates = (network?.state.data.candidates || []).slice(0, 8);
+    const attempted = network?.state.data.pageReaderAttempted || [];
+    const remaining = candidates.filter((c: { url: string }) => !attempted.includes(c.url));
 
     if (candidates.length === 0) {
       return `
@@ -56,15 +58,20 @@ export const pageReaderAgent = createAgent({
       `;
     }
 
+    // The network re-invokes this agent once per remaining candidate (see
+    // lib/network.ts's router) rather than relying on one turn to call the
+    // tool N times, since a single completion doesn't reliably emit N tool
+    // calls. Each turn only needs to handle the next unattempted candidate.
+    const next = remaining[0];
+
     return `
-      You are a price-extraction agent. For EACH of these candidate pages,
-      call read_webpage ONCE per candidate with its url, title, and site
-      (use the domain name from the url as the site):
+      You are a price-extraction agent. Call read_webpage ONCE with this
+      candidate's url, title, and site (use the domain name from the url as
+      the site):
 
-      ${JSON.stringify(candidates, null, 2)}
+      ${JSON.stringify(next, null, 2)}
 
-      Call read_webpage exactly ${candidates.length} times, once per
-      candidate above. Do not skip any candidate.
+      Call read_webpage exactly once, for this candidate only.
     `;
   },
   tools: [readWebpageTool],
