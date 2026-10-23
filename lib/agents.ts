@@ -1,7 +1,7 @@
 import { createAgent, openai } from "@inngest/agent-kit";
 import { saveQueryTool } from "./tools/query";
 import { searchShopsTool } from "./tools/search";
-import { readWebpageTool } from "./tools/webpage";
+import { readWebpagesTool } from "./tools/webpage";
 import { saveComparisonTool } from "./tools/comparison";
 import { saveRankingTool } from "./tools/ranking";
 import { approveResultTool } from "./tools/moderation";
@@ -53,35 +53,19 @@ export const pageReaderAgent = createAgent({
   description: "Opens each candidate shopping page and extracts its price",
   system: ({ network }) => {
     const candidates = (network?.state.data.candidates || []).slice(0, 8);
-    const attempted = network?.state.data.pageReaderAttempted || [];
-    const remaining = candidates.filter((c: { url: string }) => !attempted.includes(c.url));
-
-    if (candidates.length === 0) {
-      return `
-        There are no candidate pages to read. Call read_webpage ONCE with
-        url "none", title "none", site "none" to record that there is
-        nothing to read.
-      `;
-    }
-
-    // The network re-invokes this agent once per remaining candidate (see
-    // lib/network.ts's router) rather than relying on one turn to call the
-    // tool N times, since a single completion doesn't reliably emit N tool
-    // calls. Each turn only needs to handle the next unattempted candidate.
-    const next = remaining[0];
 
     return `
-      You are a price-extraction agent. Call read_webpage ONCE with this
-      candidate's url, title, and site (use the domain name from the url as
-      the site):
+      You are a price-extraction agent. Call read_webpages ONCE with the
+      full list of candidate pages below as the "candidates" array (keep
+      each one's url, title, and site — use the domain name from the url as
+      the site). The tool reads every page and extracts prices itself; you
+      only need to pass the list through.
 
-      ${JSON.stringify(next, null, 2)}
-
-      Call read_webpage exactly once, for this candidate only.
+      ${JSON.stringify(candidates, null, 2)}
     `;
   },
-  tools: [readWebpageTool],
-  tool_choice: "read_webpage",
+  tools: [readWebpagesTool],
+  tool_choice: "read_webpages",
   model: openai({ model: "gpt-5" }),
 });
 

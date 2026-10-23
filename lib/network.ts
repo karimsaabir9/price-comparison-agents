@@ -34,17 +34,7 @@ export const priceComparisonNetwork = createNetwork({
 
     if (!state?.productQuery) return queryParserAgent;
     if (state?.candidates === undefined) return searchAgent;
-    // A single pageReaderAgent turn only reliably makes ONE read_webpage
-    // call (the model doesn't always honor "call this N times" in one
-    // turn), so `listings !== undefined` alone doesn't mean every candidate
-    // was attempted — it only means the FIRST call ran. Re-enter the agent
-    // (same router re-entry pattern as the moderator's retry loop) until
-    // pageReaderAttempted has caught up with candidates.length.
-    const candidateCount = state?.candidates?.length ?? 0;
-    const attemptedCount = state?.pageReaderAttempted?.length ?? 0;
-    if (state?.listings === undefined || attemptedCount < candidateCount) {
-      return pageReaderAgent;
-    }
+    if (state?.listings === undefined) return pageReaderAgent;
     if (state?.comparisons === undefined) return comparatorAgent;
     if (state?.ranked === undefined) return rankerAgent;
     if (state?.approved === undefined) return moderatorAgent;
