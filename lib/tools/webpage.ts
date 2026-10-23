@@ -1,6 +1,7 @@
 import { createTool } from "@inngest/agent-kit";
 import { z } from "zod";
 import OpenAI from "openai";
+import { createHash } from "node:crypto";
 import { extractPriceFromText } from "../priceExtractor";
 
 const openai = new OpenAI({
@@ -23,6 +24,14 @@ export const readWebpageTool = createTool({
       return { success: true, found: false };
     }
 
+    // Inngest requires step IDs to be unique within a single function run —
+    // read_webpage is called once per candidate, so every step inside this
+    // handler needs a per-call suffix. Without this, calls 2+ collide with
+    // call 1's step IDs and Inngest replays call 1's cached result instead
+    // of actually running the step again (silently discarding every
+    // candidate after the first).
+    const stepId = createHash("md5").update(input.url).digest("hex").slice(0, 10);
+
     // Hard cost cap: defense in depth in case the model over-calls this tool
     // (or the page-reader agent gets re-invoked unexpectedly) beyond the top-8
     // candidates the design spec allows (matches Search's own 8-result cap).
@@ -31,7 +40,7 @@ export const readWebpageTool = createTool({
     // here with a MongoDB-backed counter keyed by runId, mirroring the
     // poster-attempt guard in lessons/multi-agent-system/lib/tools/imageGenerator.ts.
     const runId = network?.state.data.runId;
-    const pageReaderCalls = await step?.run("count-page-reader-call", async () => {
+    const pageReaderCalls = await step?.run(`count-page-reader-call-${stepId}`, async () => {
       if (!runId) return 1;
       const { getDB } = await import("../db");
       const db = await getDB();
@@ -47,7 +56,7 @@ export const readWebpageTool = createTool({
       return { success: true, found: false, skipped: true };
     }
 
-    const scrapedText = await step?.run("serper_scrape_call", async () => {
+    const scrapedText = await step?.run(`serper_scrape_call-${stepId}`, async () => {
       try {
         const res = await fetch("https://scrape.serper.dev", {
           method: "POST",
@@ -77,7 +86,7 @@ export const readWebpageTool = createTool({
     // generatePosterTool in the sibling project), NOT through the AgentKit
     // network — so the (potentially large) scraped text never enters the
     // shared history that gets replayed into later agents' prompts.
-    const extraction = await step?.run("extract_price_with_model", async () => {
+    const extraction = await step?.run(`extract_price_with_model-${stepId}`, async () => {
       if (!scrapedText) {
         return {
           matches: false,
@@ -147,7 +156,7 @@ export const readWebpageTool = createTool({
       network.state.data.listings = existing;
     }
 
-    await step?.run("save_to_db", async () => {
+    await step?.run(`save_to_db-${stepId}`, async () => {
       const { getDB } = await import("../db");
       const db = await getDB();
       const runId = network.state.data.runId;
