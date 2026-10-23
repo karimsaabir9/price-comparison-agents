@@ -1,6 +1,11 @@
 import { createTool } from "@inngest/agent-kit";
 import { z } from "zod";
+import OpenAI from "openai";
 import { extractPriceFromText } from "../priceExtractor";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export const readWebpageTool = createTool({
   name: "read_webpage",
@@ -58,12 +63,71 @@ export const readWebpageTool = createTool({
 
         const data = await res.json();
         return (data.text as string | undefined) ?? null;
-      } catch (error) {
+      } catch {
         return null;
       }
     });
 
-    const extracted = scrapedText ? extractPriceFromText(scrapedText) : null;
+    // Model-based extraction: a plain regex can't tell whether a matched price
+    // actually belongs to the product being searched for (e.g. a generic
+    // "Buy iPhone" catalog page can yield a price for a completely different
+    // model). The model reads the scraped text and judges both relevance and
+    // price. This call is made directly via the OpenAI SDK (like
+    // generatePosterTool in the sibling project), NOT through the AgentKit
+    // network — so the (potentially large) scraped text never enters the
+    // shared history that gets replayed into later agents' prompts.
+    const extraction = await step?.run("extract_price_with_model", async () => {
+      if (!scrapedText) {
+        return {
+          matches: false,
+          price: null as number | null,
+          currency: null as string | null,
+          extractionFailed: false,
+        };
+      }
+      try {
+        const productQuery = network?.state.data.productQuery ?? input.title;
+        const completion = await openai.chat.completions.create({
+          model: "gpt-5",
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                'You extract a product price from scraped webpage text. Respond with ONLY a JSON object: {"matches": boolean, "price": number|null, "currency": "USD"|"EUR"|"GBP"|null}. ' +
+                '"matches" is true only if the page text clearly refers to the exact product being searched for (not a different model/configuration, not a generic catalog or shop-all page, not an accessory or unrelated item). ' +
+                "If matches is false, or no clear price for that specific product is present, set price and currency to null.",
+            },
+            {
+              role: "user",
+              content: `Product being searched for: "${productQuery}"\nPage title: "${input.title}"\nPage text:\n${scrapedText.slice(0, 6000)}`,
+            },
+          ],
+        });
+        const raw = completion.choices[0]?.message?.content ?? "{}";
+        const parsed = JSON.parse(raw);
+        return {
+          matches: !!parsed.matches,
+          price: typeof parsed.price === "number" ? parsed.price : null,
+          currency: typeof parsed.currency === "string" ? parsed.currency : null,
+          extractionFailed: false,
+        };
+      } catch {
+        return {
+          matches: false,
+          price: null as number | null,
+          currency: null as string | null,
+          extractionFailed: true,
+        };
+      }
+    });
+
+    const extracted =
+      extraction?.matches && extraction.price !== null && extraction.currency
+        ? { price: extraction.price, currency: extraction.currency }
+        : extraction?.extractionFailed && scrapedText
+          ? extractPriceFromText(scrapedText)
+          : null;
 
     const existing = network?.state.data.listings || [];
 
