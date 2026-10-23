@@ -19,21 +19,25 @@ export const readWebpageTool = createTool({
     }
 
     const scrapedText = await step?.run("serper_scrape_call", async () => {
-      const res = await fetch("https://scrape.serper.dev", {
-        method: "POST",
-        headers: {
-          "X-API-KEY": process.env.SERPER_API_KEY!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: input.url }),
-      });
+      try {
+        const res = await fetch("https://scrape.serper.dev", {
+          method: "POST",
+          headers: {
+            "X-API-KEY": process.env.SERPER_API_KEY!,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: input.url }),
+        });
 
-      if (!res.ok) {
+        if (!res.ok) {
+          return null;
+        }
+
+        const data = await res.json();
+        return (data.text as string | undefined) ?? null;
+      } catch (error) {
         return null;
       }
-
-      const data = await res.json();
-      return (data.text as string | undefined) ?? null;
     });
 
     const extracted = scrapedText ? extractPriceFromText(scrapedText) : null;
