@@ -18,6 +18,29 @@ export const readWebpageTool = createTool({
       return { success: true, found: false };
     }
 
+    // Hard cost cap: defense in depth in case the model over-calls this tool
+    // (or the page-reader agent gets re-invoked unexpectedly) beyond the top-5
+    // candidates the design spec allows. The cap is normally enforced by the
+    // agent's system prompt alone, which isn't durable — so also enforce it
+    // here with a MongoDB-backed counter keyed by runId, mirroring the
+    // poster-attempt guard in lessons/multi-agent-system/lib/tools/imageGenerator.ts.
+    const runId = network?.state.data.runId;
+    const pageReaderCalls = await step?.run("count-page-reader-call", async () => {
+      if (!runId) return 1;
+      const { getDB } = await import("../db");
+      const db = await getDB();
+      const result = await db.collection("results").findOneAndUpdate(
+        { runId },
+        { $inc: { pageReaderCalls: 1 } },
+        { upsert: true, returnDocument: "after" },
+      );
+      return result?.pageReaderCalls ?? 1;
+    });
+
+    if (runId && pageReaderCalls && pageReaderCalls > 5) {
+      return { success: true, found: false, skipped: true };
+    }
+
     const scrapedText = await step?.run("serper_scrape_call", async () => {
       try {
         const res = await fetch("https://scrape.serper.dev", {

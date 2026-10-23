@@ -87,7 +87,7 @@ export default function Home() {
           input={input}
           onInputChange={setInput}
           onRun={handleRun}
-          isLoading={isLoading}
+          isLoading={isLoading || result?.status === "running"}
         />
 
         <SearchHistory
@@ -99,6 +99,12 @@ export default function Home() {
 
         {result && (
           <>
+            {result.status === "failed" && (
+              <p className="mb-4 text-sm text-destructive">
+                {result.error || "The run failed unexpectedly."}
+              </p>
+            )}
+
             <JobStatus
               status={result.status}
               productQuery={state?.productQuery}
