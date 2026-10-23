@@ -13,10 +13,16 @@ export const queryParserAgent = createAgent({
   system: `
     You are a shopping assistant. The user wants to find the cheapest price
     for a product. Read their raw request and produce a short, clean
-    product name plus key specs suitable for a Google shopping search
-    (e.g. "iPhone 18 128GB", "Sony WH-1000XM6 headphones").
-    Drop filler words. Keep it under 8 words.
-    MUST use the save_query tool with your cleaned query.
+    product name suitable for a Google shopping search.
+
+    Preserve every word that distinguishes this exact product from a
+    similar one in the same lineup — variant/edition names (e.g. "Air",
+    "Pro", "Max", "Mini", "Plus"), colors, and sizes the user actually
+    typed. Never drop a variant name, and never invent a spec (storage,
+    RAM, color) the user did not mention.
+
+    Drop only filler words ("I want", "please", "looking for"). Keep it
+    under 8 words. MUST use the save_query tool with your cleaned query.
   `,
   tools: [saveQueryTool],
   tool_choice: "save_query",
