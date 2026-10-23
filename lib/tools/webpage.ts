@@ -24,8 +24,9 @@ export const readWebpageTool = createTool({
     }
 
     // Hard cost cap: defense in depth in case the model over-calls this tool
-    // (or the page-reader agent gets re-invoked unexpectedly) beyond the top-5
-    // candidates the design spec allows. The cap is normally enforced by the
+    // (or the page-reader agent gets re-invoked unexpectedly) beyond the top-8
+    // candidates the design spec allows (matches Search's own 8-result cap).
+    // The cap is normally enforced by the
     // agent's system prompt alone, which isn't durable — so also enforce it
     // here with a MongoDB-backed counter keyed by runId, mirroring the
     // poster-attempt guard in lessons/multi-agent-system/lib/tools/imageGenerator.ts.
@@ -42,7 +43,7 @@ export const readWebpageTool = createTool({
       return result?.pageReaderCalls ?? 1;
     });
 
-    if (runId && pageReaderCalls && pageReaderCalls > 5) {
+    if (runId && pageReaderCalls && pageReaderCalls > 8) {
       return { success: true, found: false, skipped: true };
     }
 

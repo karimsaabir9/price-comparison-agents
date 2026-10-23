@@ -46,7 +46,7 @@ export const pageReaderAgent = createAgent({
   name: "page-reader",
   description: "Opens each candidate shopping page and extracts its price",
   system: ({ network }) => {
-    const candidates = (network?.state.data.candidates || []).slice(0, 5);
+    const candidates = (network?.state.data.candidates || []).slice(0, 8);
 
     if (candidates.length === 0) {
       return `
