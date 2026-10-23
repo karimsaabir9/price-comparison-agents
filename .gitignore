@@ -32,3 +32,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI tooling artifacts — keep local, never push to GitHub
+.superpowers/
+.claude/
+docs/
+AGENTS.md
+CLAUDE.md
+agents.md
+claude.md
+*.agent.md
