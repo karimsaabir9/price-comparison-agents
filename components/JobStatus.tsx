@@ -1,5 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-
 type JobStatusProps = {
   status: "running" | "success" | "failed";
   productQuery?: string;
@@ -10,22 +8,23 @@ type JobStatusProps = {
   approved?: boolean;
 };
 
-const statusBadge: Record<JobStatusProps["status"], string> = {
-  running: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  failed: "bg-destructive/10 text-destructive",
+const statusDot: Record<JobStatusProps["status"], string> = {
+  running: "bg-accent",
+  success: "bg-primary",
+  failed: "bg-destructive",
 };
 
 const statusLabel: Record<JobStatusProps["status"], string> = {
-  running: "🔄 Running",
-  success: "✅ Complete",
-  failed: "❌ Failed",
+  running: "Running",
+  success: "Complete",
+  failed: "Failed",
 };
 
 const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="flex justify-between">
+  <div className="receipt-line text-sm">
     <span className="text-muted-foreground">{label}</span>
-    <span className="font-medium">{value}</span>
+    <span className="receipt-leader" />
+    <span className="font-ticket text-foreground">{value}</span>
   </div>
 );
 
@@ -39,38 +38,31 @@ const JobStatus = ({
   approved,
 }: JobStatusProps) => {
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Job Status</CardTitle>
-          <span className={`text-sm font-medium px-3 py-1 rounded ${statusBadge[status]}`}>
-            {statusLabel[status]}
-          </span>
-        </div>
-      </CardHeader>
+    <div className="rounded-sm bg-card p-5 ring-1 ring-foreground/10">
+      <div className="mb-3 flex items-center gap-2">
+        <span className={`h-1.5 w-1.5 rounded-full ${statusDot[status]}`} aria-hidden="true" />
+        <p className="text-sm text-foreground">{statusLabel[status]}</p>
+      </div>
 
-      <CardContent>
-        <div className="space-y-2 text-sm">
-          <Row label="Query Parsed:" value={productQuery || "—"} />
-          <Row label="Candidates Found:" value={candidates ?? "—"} />
-          <Row label="Pages Read:" value={listings ?? "—"} />
-          <Row label="Compared:" value={comparisons ?? "—"} />
-          <Row label="Ranked:" value={ranked ?? "—"} />
-          {approved !== undefined && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Approved:</span>
-                <span
-                  className={approved ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}
-                >
-                  {approved ? "✓ Yes" : "✗ No"}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="space-y-1.5">
+        <Row label="Query" value={productQuery || "—"} />
+        <Row label="Candidates found" value={candidates ?? "—"} />
+        <Row label="Pages read" value={listings ?? "—"} />
+        <Row label="Compared" value={comparisons ?? "—"} />
+        <Row label="Ranked" value={ranked ?? "—"} />
+        {approved !== undefined && (
+          <div className="receipt-line pt-1.5 text-sm">
+            <span className="text-muted-foreground">Approved</span>
+            <span className="receipt-leader" />
+            <span
+              className={`font-ticket ${approved ? "text-primary" : "text-destructive"}`}
+            >
+              {approved ? "Yes" : "No"}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

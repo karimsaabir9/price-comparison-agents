@@ -1,4 +1,3 @@
-import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 
 type FinalAnswer = {
@@ -16,33 +15,43 @@ type FinalAnswerCardProps = {
 const FinalAnswerCard = ({ finalAnswer }: FinalAnswerCardProps) => {
   const found = finalAnswer.price !== null && finalAnswer.url !== null;
 
+  if (!found) {
+    return (
+      <div className="rounded-sm bg-card p-5 text-center ring-1 ring-foreground/10">
+        <p className="font-display text-lg text-foreground">No price found</p>
+        <p className="mx-auto mt-1 max-w-prose text-sm text-muted-foreground">
+          {finalAnswer.summary}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <Card className="border-primary/30 bg-primary/[0.03]">
-      <CardContent className="py-6">
-        {found ? (
-          <div className="flex flex-col items-center text-center gap-3">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Cheapest price found
-            </span>
-            <span className="text-4xl font-bold">
-              {finalAnswer.currency} {finalAnswer.price!.toFixed(2)}
-            </span>
-            <span className="text-lg font-medium">{finalAnswer.siteName}</span>
-            <p className="text-sm text-muted-foreground max-w-prose">{finalAnswer.summary}</p>
-            <a href={finalAnswer.url!} target="_blank" rel="noreferrer" className="mt-2">
-              <Button size="lg">Buy now →</Button>
-            </a>
-          </div>
-        ) : (
-          <div className="text-center space-y-2">
-            <span className="text-lg font-medium">No price found</span>
-            <p className="text-sm text-muted-foreground max-w-prose mx-auto">
-              {finalAnswer.summary}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="relative mx-auto max-w-sm animate-[tag-settle_0.5s_ease-out]">
+      <div
+        className="relative bg-accent/12 py-7 pr-7 pl-10 text-center ring-2 ring-accent"
+        style={{
+          clipPath: "polygon(0 50%, 10% 0, 100% 0, 100% 100%, 10% 100%)",
+        }}
+      >
+        <span
+          className="absolute top-1/2 left-[5%] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background ring-1 ring-accent"
+          aria-hidden="true"
+        />
+
+        <p className="text-[11px] text-muted-foreground">Cheapest price found</p>
+        <p className="font-ticket mt-1 text-4xl font-semibold text-foreground">
+          {finalAnswer.currency} {finalAnswer.price!.toFixed(2)}
+        </p>
+        <p className="font-display mt-1 text-base text-foreground">{finalAnswer.siteName}</p>
+        <p className="mx-auto mt-2 max-w-prose text-sm text-muted-foreground">
+          {finalAnswer.summary}
+        </p>
+        <a href={finalAnswer.url!} target="_blank" rel="noreferrer" className="mt-4 inline-block">
+          <Button size="lg">Buy now</Button>
+        </a>
+      </div>
+    </div>
   );
 };
 

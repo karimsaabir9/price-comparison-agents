@@ -1,5 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-
 type HistoryItem = {
   runId: string;
   input: string;
@@ -14,10 +12,10 @@ type SearchHistoryProps = {
   onDelete: (runId: string) => void;
 };
 
-const statusStyles: Record<HistoryItem["status"], string> = {
-  success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  failed: "bg-destructive/10 text-destructive",
-  running: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+const statusDot: Record<HistoryItem["status"], string> = {
+  success: "bg-primary",
+  failed: "bg-destructive",
+  running: "bg-accent",
 };
 
 const SearchHistory = ({ items, selectedRunId, onSelect, onDelete }: SearchHistoryProps) => {
@@ -26,51 +24,51 @@ const SearchHistory = ({ items, selectedRunId, onSelect, onDelete }: SearchHisto
   }
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Search History</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 max-h-72 overflow-auto">
-          {items.map((item) => (
-            <div
-              key={item.runId}
-              className={`w-full flex items-center justify-between border border-border rounded-lg p-3 hover:bg-muted/50 transition-colors ${
-                selectedRunId === item.runId ? "border-ring bg-muted/50" : ""
-              }`}
+    <div className="p-5 pt-4">
+      <p className="mb-3 text-xs text-muted-foreground">Recent searches</p>
+      <div className="space-y-1">
+        {items.map((item) => (
+          <div
+            key={item.runId}
+            className={`ticket-stub flex items-center gap-3 pl-3 py-2 transition-colors ${
+              selectedRunId === item.runId ? "bg-muted/60" : "hover:bg-muted/30"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot[item.status]}`}
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              onClick={() => onSelect(item.runId)}
+              className="min-w-0 flex-1 text-left"
             >
-              <button
-                type="button"
-                onClick={() => onSelect(item.runId)}
-                className="flex-1 min-w-0 text-left"
-              >
-                <p className="text-sm font-medium truncate">{item.input}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {new Date(item.createdAt).toLocaleString()}
-                </p>
-              </button>
-              <span
-                className={`text-xs px-2 py-1 rounded flex-shrink-0 ml-3 ${statusStyles[item.status]}`}
-              >
-                {item.status}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm("Delete this search from history?")) {
-                    onDelete(item.runId);
-                  }
-                }}
-                aria-label="Delete"
-                className="ml-2 text-muted-foreground hover:text-destructive flex-shrink-0 px-1"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+              <p className="truncate text-sm text-foreground">{item.input}</p>
+              <p className="font-ticket text-[11px] text-muted-foreground">
+                {new Date(item.createdAt).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("Delete this search from history?")) {
+                  onDelete(item.runId);
+                }
+              }}
+              aria-label="Delete"
+              className="shrink-0 px-1 text-muted-foreground hover:text-destructive"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 

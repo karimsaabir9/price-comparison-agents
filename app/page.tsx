@@ -74,36 +74,44 @@ export default function Home() {
   const state = result?.state || null;
 
   return (
-    <main className="min-h-screen bg-background p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8 border-b border-border pb-4">
-          <h1 className="text-3xl font-bold">Price Comparison Agents</h1>
-          <p className="text-muted-foreground mt-1">
-            Multi-agent system that finds the cheapest place to buy a product
+    <main className="min-h-screen bg-background px-4 py-10 sm:py-14">
+      <div className="mx-auto w-full max-w-xl">
+        <div className="mb-6">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            Cheapest Find
+          </h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Agents check real stores and hand you a priced ticket for the lowest one
           </p>
         </div>
 
-        <SearchInput
-          input={input}
-          onInputChange={setInput}
-          onRun={handleRun}
-          isLoading={isLoading || result?.status === "running"}
-        />
+        <div className="rounded-sm bg-card ring-1 ring-foreground/10">
+          <SearchInput
+            input={input}
+            onInputChange={setInput}
+            onRun={handleRun}
+            isLoading={isLoading || result?.status === "running"}
+          />
 
-        <SearchHistory
-          items={history || []}
-          selectedRunId={runId}
-          onSelect={setRunId}
-          onDelete={(deleteRunId) => deleteRun.mutate(deleteRunId)}
-        />
+          <hr className="ticket-tear" />
+
+          <SearchHistory
+            items={history || []}
+            selectedRunId={runId}
+            onSelect={setRunId}
+            onDelete={(deleteRunId) => deleteRun.mutate(deleteRunId)}
+          />
+        </div>
 
         {result && (
-          <>
+          <div className="mt-8 space-y-6">
             {result.status === "failed" && (
-              <p className="mb-4 text-sm text-destructive">
+              <p className="text-sm text-destructive">
                 {result.error || "The run failed unexpectedly."}
               </p>
             )}
+
+            {state?.finalAnswer && <FinalAnswerCard finalAnswer={state.finalAnswer} />}
 
             <JobStatus
               status={result.status}
@@ -115,18 +123,14 @@ export default function Home() {
               approved={state?.approved}
             />
 
-            {state?.finalAnswer && (
-              <div className="mb-6">
-                <FinalAnswerCard finalAnswer={state.finalAnswer} />
-              </div>
-            )}
-
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="rounded-sm bg-card p-5 ring-1 ring-foreground/10">
               <CandidatesCard candidates={state?.candidates || []} />
+              <hr className="ticket-tear my-4" />
               <ListingsCard listings={state?.listings || []} />
+              <hr className="ticket-tear my-4" />
               <RankedCard ranked={state?.ranked || []} />
             </div>
-          </>
+          </div>
         )}
       </div>
     </main>

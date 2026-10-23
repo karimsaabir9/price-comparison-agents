@@ -8,7 +8,7 @@ export async function GET() {
       .collection("results")
       .find({})
       .sort({ createdAt: -1 })
-      .limit(5)
+      .limit(3)
       .toArray();
 
     return NextResponse.json(
