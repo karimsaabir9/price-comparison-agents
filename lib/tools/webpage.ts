@@ -96,8 +96,10 @@ export const readWebpageTool = createTool({
               role: "system",
               content:
                 'You extract a product price from scraped webpage text. Respond with ONLY a JSON object: {"matches": boolean, "price": number|null, "currency": "USD"|"EUR"|"GBP"|null}. ' +
-                '"matches" is true only if the page text clearly refers to the exact product being searched for (not a different model/configuration, not a generic catalog or shop-all page, not an accessory or unrelated item). ' +
-                "If matches is false, or no clear price for that specific product is present, set price and currency to null.",
+                '"matches" is true if the page text clearly refers to the exact product being searched for (not a different model/configuration, not a generic catalog or shop-all page for unrelated products, not an accessory or unrelated item). ' +
+                "This includes price-comparison or aggregator pages (e.g. a page listing this exact product's price across several stores or regions) — in that case set matches true and pick the single LOWEST real consumer retail price shown for this exact product. " +
+                "Do NOT match wholesale/bulk-order price ranges (e.g. per-unit prices that depend on minimum order quantity) — those are not real consumer prices. " +
+                "If matches is false, or no clear single retail price for that specific product is present, set price and currency to null.",
             },
             {
               role: "user",
